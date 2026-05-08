@@ -1,8 +1,9 @@
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import User from "../../models/user.model.js";
 import Otp from "../../models/otp.model.js";
 import { generateOTP } from "../../utils/otp.js";
-import { sendOTPEmail } from "../../utils/email.js";
+import { sendOTPEmail, sendPasswordResetEmail } from "../../utils/email.js";
 
 export const registerService = async ({ name, email, password }) => {
     const existing = await User.findOne({ where: { email } });
@@ -18,11 +19,11 @@ export const registerService = async ({ name, email, password }) => {
         await User.create({ name, email, password: hashedPassword });
     }
 
-    await Otp.destroy({ where: { email } });
+    await Otp.destroy({ where: { email, purpose: "activation" } });
 
     const code = generateOTP();
     const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 phút
-    await Otp.create({ email, code, expiry });
+    await Otp.create({ email, code, expiry, purpose: "activation" });
 
     await sendOTPEmail(email, code);
 };
@@ -33,7 +34,9 @@ export const verifyOTPService = async ({ email, otp }) => {
     if (user.isVerified)
         throw { status: 400, message: "Tài khoản đã được kích hoạt." };
 
-    const otpRecord = await Otp.findOne({ where: { email, isUsed: false } });
+    const otpRecord = await Otp.findOne({
+        where: { email, purpose: "activation", isUsed: false },
+    });
     if (!otpRecord) throw { status: 400, message: "OTP không tồn tại." };
     if (otpRecord.code !== otp)
         throw { status: 400, message: "OTP không đúng." };
@@ -65,7 +68,7 @@ export const loginService = async ({ email, password }) => {
         throw { status: 401, message: "Email hoặc mật khẩu không đúng." };
 
     // 4. Ký JWT
-    const payload = { id: user.id, email: user.email, role: "user" };
+    const payload = { id: user.id, email: user.email, role: user.role };
 
     const accessToken = jwt.sign(payload, process.env.JWT_SECRET, {
         expiresIn: process.env.JWT_EXPIRES_IN || "15m",
@@ -84,6 +87,49 @@ export const loginService = async ({ email, password }) => {
             id: user.id,
             name: user.name,
             email: user.email,
+            role: user.role,
         },
+        profileUrl: user.role === "admin" ? "/admin/profile" : "/user/profile",
     };
+};
+
+export const requestPasswordResetService = async ({ email }) => {
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+        throw { status: 404, message: "Email không tồn tại." };
+    }
+
+    const code = generateOTP();
+    const expiry = new Date(Date.now() + 10 * 60 * 1000);
+
+    await Otp.destroy({ where: { email, purpose: "password_reset" } });
+    await Otp.create({ email, code, expiry, purpose: "password_reset" });
+    await sendPasswordResetEmail(email, code);
+};
+
+export const resetPasswordService = async ({ email, otp, password }) => {
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+        throw { status: 404, message: "Người dùng không tồn tại." };
+    }
+
+    const otpRecord = await Otp.findOne({
+        where: { email, purpose: "password_reset", isUsed: false },
+    });
+
+    if (!otpRecord) {
+        throw { status: 400, message: "OTP không tồn tại." };
+    }
+
+    if (otpRecord.code !== otp) {
+        throw { status: 400, message: "OTP không đúng." };
+    }
+
+    if (otpRecord.expiry < new Date()) {
+        throw { status: 400, message: "OTP đã hết hạn." };
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+    await user.update({ password: hashedPassword });
+    await otpRecord.update({ isUsed: true });
 };
