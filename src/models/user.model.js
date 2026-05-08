@@ -22,6 +22,11 @@ const User = sequelize.define(
             type: DataTypes.STRING,
             allowNull: false,
         },
+        role: {
+            type: DataTypes.ENUM("user", "admin"),
+            allowNull: false,
+            defaultValue: "user",
+        },
         isVerified: {
             type: DataTypes.BOOLEAN,
             defaultValue: false,
@@ -30,7 +35,7 @@ const User = sequelize.define(
     {
         tableName: "users",
         timestamps: true,
-        underscored: true,
+        underscored: false,
     },
 );
 

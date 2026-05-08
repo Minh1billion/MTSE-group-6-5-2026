@@ -5,7 +5,7 @@ const Otp = sequelize.define('Otp', {
   id: {
     type: DataTypes.UUID,
     defaultValue: DataTypes.UUIDV4,
-    primaryKey:   true,
+    primaryKey: true,
   },
   email: {
     type: DataTypes.STRING,
@@ -14,6 +14,11 @@ const Otp = sequelize.define('Otp', {
   code: {
     type: DataTypes.STRING(6),
     allowNull: false,
+  },
+  purpose: {
+    type: DataTypes.ENUM('activation', 'password_reset'),
+    allowNull: false,
+    defaultValue: 'activation',
   },
   expiry: {
     type: DataTypes.DATE,
@@ -26,7 +31,7 @@ const Otp = sequelize.define('Otp', {
 }, {
   tableName: 'otps',
   timestamps: true,
-  underscored: true,
+  underscored: false,
 });
 
 export default Otp;
