@@ -1,6 +1,18 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosClient from "../../api/axiosClient";
 
+const getErrorMessage = (error, fallback) => {
+    if (typeof error === "string") {
+        return error;
+    }
+
+    if (error?.errors && Array.isArray(error.errors) && error.errors.length > 0) {
+        return error.errors.join("; ");
+    }
+
+    return error?.message || fallback;
+};
+
 const storedUser = localStorage.getItem("auth_user");
 const storedToken = localStorage.getItem("access_token");
 
@@ -11,7 +23,9 @@ export const loginThunk = createAsyncThunk(
             const res = await axiosClient.post("/api/auth/login", data);
             return res;
         } catch (error) {
-            return rejectWithValue(error?.message || "Đăng nhập thất bại");
+            return rejectWithValue(
+                getErrorMessage(error, "Đăng nhập thất bại"),
+            );
         }
     },
 );
@@ -23,7 +37,9 @@ export const registerThunk = createAsyncThunk(
             const res = await axiosClient.post("/api/auth/register", data);
             return res;
         } catch (error) {
-            return rejectWithValue(error?.message || "Đăng ký thất bại");
+            return rejectWithValue(
+                getErrorMessage(error, "Đăng ký thất bại"),
+            );
         }
     },
 );
@@ -35,7 +51,9 @@ export const verifyOtpThunk = createAsyncThunk(
             const res = await axiosClient.post("/api/auth/verify-otp", data);
             return res;
         } catch (error) {
-            return rejectWithValue(error?.message || "Xác thực OTP thất bại");
+            return rejectWithValue(
+                getErrorMessage(error, "Xác thực OTP thất bại"),
+            );
         }
     },
 );
@@ -50,7 +68,9 @@ export const requestPasswordResetThunk = createAsyncThunk(
             );
             return res;
         } catch (error) {
-            return rejectWithValue(error?.message || "Không gửi được OTP");
+            return rejectWithValue(
+                getErrorMessage(error, "Không gửi được OTP"),
+            );
         }
     },
 );
@@ -65,7 +85,9 @@ export const resetPasswordThunk = createAsyncThunk(
             );
             return res;
         } catch (error) {
-            return rejectWithValue(error?.message || "Đặt lại mật khẩu thất bại");
+            return rejectWithValue(
+                getErrorMessage(error, "Đặt lại mật khẩu thất bại"),
+            );
         }
     },
 );
