@@ -1,7 +1,8 @@
 .env
-node_modules/# Documentation files
+node_modules/
 *.pdf
 *.doc
 *.docx
 BT06052026.json
 StepbyStep.docx
+dist

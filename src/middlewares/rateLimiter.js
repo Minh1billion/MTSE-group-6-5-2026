@@ -22,3 +22,10 @@ export const loginLimiter = rateLimit({
         message: "Quá nhiều lần đăng nhập thất bại, thử lại sau 15 phút.",
     },
 });
+
+// Forgot password
+export const forgotPasswordLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: { message: "Quá nhiều yêu cầu, thử lại sau 15 phút." },
+});
